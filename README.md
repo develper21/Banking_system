@@ -1,4 +1,4 @@
-## Foti Banking App
+## Banking App
 
 ## <a name="table">Table of Contents</a>
 
