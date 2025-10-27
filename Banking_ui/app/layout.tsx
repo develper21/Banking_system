@@ -11,8 +11,8 @@ const ibmPlexSerif = IBM_Plex_Serif({
 });
 
 export const metadata: Metadata = {
-  title: "Foti Banking",
-  description: "Foti Banking is a modern banking platform for everyone.",
+  title: "Banking",
+  description: "Banking is a modern banking platform for everyone.",
   icons: {
     icon: "/icons/logo.svg",
   },
