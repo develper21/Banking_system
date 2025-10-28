@@ -48,7 +48,7 @@ function createClientInstance(throwOnMissing = false): Client {
   return _client;
 }
 
-export function getDwollaClient({ throwOnMissing = false } = {}): Client {
+function getDwollaClient({ throwOnMissing = false } = {}): Client {
   return createClientInstance(throwOnMissing);
 }
 
