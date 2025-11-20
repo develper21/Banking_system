@@ -44,4 +44,9 @@ export default withSentryConfig(nextConfig, {
   // https://docs.sentry.io/product/crons/
   // https://vercel.com/docs/cron-jobs
   automaticVercelMonitors: true,
+}, {
+  // Next.js only emits sourceMappingURL comments for the browser bundles, so
+  // disable auto-linking to avoid "could not determine a source map reference" warnings
+  // (see https://github.com/getsentry/sentry-webpack-plugin#usage).
+  sourceMapReference: false,
 });
