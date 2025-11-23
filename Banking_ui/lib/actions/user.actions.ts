@@ -1,6 +1,6 @@
 "use server";
 
-import { ID, Query } from "node-appwrite";
+import { ID, Query, Models } from "node-appwrite";
 import { createAdminClient, createSessionClient } from "../appwrite";
 import { cookies } from "next/headers";
 import { encryptId, extractCustomerIdFromUrl, parseStringify } from "../utils";
@@ -22,8 +22,8 @@ const {
 
 const isProduction = process.env.NODE_ENV === "production";
 
-const setSessionCookie = (secret: string) => {
-  cookies().set("appwrite-session", secret, {
+const setSessionCookie = (session: Models.Session) => {
+  cookies().set("appwrite-session", session.$id, {
     path: "/",
     httpOnly: true,
     sameSite: "strict",
@@ -52,7 +52,7 @@ export const signIn = async ({ email, password }: signInProps) => {
     const { account } = await createAdminClient();
     const session = await account.createEmailPasswordSession(email, password);
 
-    setSessionCookie(session.secret);
+    setSessionCookie(session);
 
     const user = await getUserInfo({ userId: session.userId });
 
@@ -102,7 +102,7 @@ export const signUp = async ({ password, ...userData }: SignUpParams) => {
 
     const session = await account.createEmailPasswordSession(email, password);
 
-    setSessionCookie(session.secret);
+    setSessionCookie(session);
 
     return parseStringify(newUser);
   } catch (error) {
