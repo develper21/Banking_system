@@ -14,11 +14,13 @@ import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { signIn, signUp } from "@/lib/actions/user.actions";
 import PlaidLink from "./PlaidLink";
+import { useNotification } from "@/components/NotificationProvider";
 
 const AuthForm = ({ type }: { type: string }) => {
   const router = useRouter();
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { notify } = useNotification();
   const formSchema = authFormSchema(type);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -58,6 +60,11 @@ const AuthForm = ({ type }: { type: string }) => {
         const newUser = await signUp(userData);
 
         setUser(newUser);
+        notify({
+          title: "Account created",
+          message: "Link your bank account to finish setup",
+          type: "success",
+        });
       }
 
       if (type === "sign-in") {
@@ -66,10 +73,23 @@ const AuthForm = ({ type }: { type: string }) => {
           password: data.password,
         });
 
-        if (response) router.push("/");
+        if (response) {
+          router.push("/");
+          notify({
+            title: "Signed in",
+            message: "Taking you to your dashboard",
+            type: "success",
+          });
+        }
       }
     } catch (error) {
       console.log(error);
+      notify({
+        title: "Something went wrong",
+        message:
+          error instanceof Error ? error.message : "Please try again in a moment",
+        type: "error",
+      });
     } finally {
       setIsLoading(false);
     }
