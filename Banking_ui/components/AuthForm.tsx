@@ -62,9 +62,10 @@ const AuthForm = ({ type }: { type: string }) => {
         setUser(newUser);
         notify({
           title: "Account created",
-          message: "Link your bank account to finish setup",
+          message: "Taking you to your dashboard",
           type: "success",
         });
+        router.push("/");
       }
 
       if (type === "sign-in") {
