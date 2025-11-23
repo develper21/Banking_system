@@ -20,6 +20,17 @@ const {
   APPWRITE_BANK_COLLECTION_ID: BANK_COLLECTION_ID,
 } = process.env;
 
+const isProduction = process.env.NODE_ENV === "production";
+
+const setSessionCookie = (secret: string) => {
+  cookies().set("appwrite-session", secret, {
+    path: "/",
+    httpOnly: true,
+    sameSite: "strict",
+    secure: isProduction,
+  });
+};
+
 export const getUserInfo = async ({ userId }: getUserInfoProps) => {
   try {
     const { database } = await createAdminClient();
@@ -41,12 +52,7 @@ export const signIn = async ({ email, password }: signInProps) => {
     const { account } = await createAdminClient();
     const session = await account.createEmailPasswordSession(email, password);
 
-    cookies().set("appwrite-session", session.secret, {
-      path: "/",
-      httpOnly: true,
-      sameSite: "strict",
-      secure: true,
-    });
+    setSessionCookie(session.secret);
 
     const user = await getUserInfo({ userId: session.userId });
 
@@ -96,12 +102,7 @@ export const signUp = async ({ password, ...userData }: SignUpParams) => {
 
     const session = await account.createEmailPasswordSession(email, password);
 
-    cookies().set("appwrite-session", session.secret, {
-      path: "/",
-      httpOnly: true,
-      sameSite: "strict",
-      secure: true,
-    });
+    setSessionCookie(session.secret);
 
     return parseStringify(newUser);
   } catch (error) {
