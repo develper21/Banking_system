@@ -6,7 +6,7 @@ import { parseStringify } from "../utils";
 
 const {
   APPWRITE_DATABASE_ID: DATABASE_ID,
-  APPWRITE_TRANSACTION_COLLECTION_ID: TRANSACTION_COLLECTION_ID,
+  APPWRITE_TRANSACTION_COLLECTION_NAME: TRANSACTION_COLLECTION_NAME,
 } = process.env;
 
 export const createTransaction = async (
@@ -17,7 +17,7 @@ export const createTransaction = async (
 
     const newTransaction = await database.createDocument(
       DATABASE_ID!,
-      TRANSACTION_COLLECTION_ID!,
+      TRANSACTION_COLLECTION_NAME!,
       ID.unique(),
       {
         channel: "online",
@@ -40,13 +40,13 @@ export const getTransactionsByBankId = async ({
 
     const senderTransactions = await database.listDocuments(
       DATABASE_ID!,
-      TRANSACTION_COLLECTION_ID!,
+      TRANSACTION_COLLECTION_NAME!,
       [Query.equal("senderBankId", bankId)]
     );
 
     const receiverTransactions = await database.listDocuments(
       DATABASE_ID!,
-      TRANSACTION_COLLECTION_ID!,
+      TRANSACTION_COLLECTION_NAME!,
       [Query.equal("receiverBankId", bankId)]
     );
 
