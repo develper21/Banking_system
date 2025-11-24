@@ -3,7 +3,7 @@
 import { ID, Query, Models } from "node-appwrite";
 import { createAdminClient, createSessionClient } from "../appwrite";
 import { cookies } from "next/headers";
-import { encryptId, extractCustomerIdFromUrl, parseStringify } from "../utils";
+import { encryptId, parseStringify } from "../utils";
 import {
   CountryCode,
   ProcessorTokenCreateRequest,
@@ -12,18 +12,21 @@ import {
 } from "plaid";
 import { plaidClient } from "@/lib/plaid";
 import { revalidatePath } from "next/cache";
-import { addFundingSource, createDwollaCustomer } from "./dwolla.actions";
 
 const {
   APPWRITE_DATABASE_ID: DATABASE_ID,
-  APPWRITE_USER_COLLECTION_ID: USER_COLLECTION_ID,
-  APPWRITE_BANK_COLLECTION_ID: BANK_COLLECTION_ID,
+  APPWRITE_USER_COLLECTION_NAME: USER_COLLECTION_NAME,
+  APPWRITE_BANK_COLLECTION_NAME: BANK_COLLECTION_NAME,
 } = process.env;
 
 const isProduction = process.env.NODE_ENV === "production";
 
 const setSessionCookie = (session: Models.Session) => {
-  cookies().set("appwrite-session", session.$id, {
+  if (!session.secret) {
+    throw new Error("Appwrite session secret missing");
+  }
+
+  cookies().set("appwrite-session", session.secret, {
     path: "/",
     httpOnly: true,
     sameSite: "strict",
@@ -31,30 +34,68 @@ const setSessionCookie = (session: Models.Session) => {
   });
 };
 
-export const getUserInfo = async ({ userId }: getUserInfoProps) => {
+export const getUserInfo = async ({ email }: { email: string }) => {
   try {
     const { database } = await createAdminClient();
 
+    console.log("[getUserInfo] Appwrite collection", {
+      databaseId: DATABASE_ID,
+      userCollectionName: USER_COLLECTION_NAME,
+    });
+
     const user = await database.listDocuments(
       DATABASE_ID!,
-      USER_COLLECTION_ID!,
-      [Query.equal("userId", [userId])]
+      USER_COLLECTION_NAME!,
+      [Query.equal("email", [email])]
     );
 
-    return parseStringify(user.documents[0]);
+    const userDocument = user.documents[0];
+
+    if (!userDocument) {
+      console.log("User document not found in Appwrite");
+      return null;
+    }
+
+    return parseStringify(userDocument);
   } catch (error) {
-    console.log(error);
+    console.log("getUserInfo error:", error);
+    return null;
   }
 };
 
 export const signIn = async ({ email, password }: signInProps) => {
   try {
-    const { account } = await createAdminClient();
+    const { account, database } = await createAdminClient();
     const session = await account.createEmailPasswordSession(email, password);
 
     setSessionCookie(session);
 
-    const user = await getUserInfo({ userId: session.userId });
+    let user = await getUserInfo({ email });
+
+    // If user document doesn't exist, create it for existing Appwrite users
+    if (!user) {
+      const accountInfo = await account.get();
+      const newUser = await database.createDocument(
+        DATABASE_ID!,
+        USER_COLLECTION_NAME!,
+        ID.unique(),
+        {
+          username: email.split('@')[0], // Required username field
+          passwordHash: 'hashed_password_placeholder', // Required passwordHash field  
+          status: 'active', // Required status field
+          firstName: accountInfo.name?.split(' ')[0] || '',
+          lastName: accountInfo.name?.split(' ').slice(1).join(' ') || '',
+          email: accountInfo.email,
+          address1: '',
+          city: '',
+          state: '',
+          postalCode: '',
+          dateOfBirth: '',
+          ssn: '',
+        }
+      );
+      user = parseStringify(newUser);
+    }
 
     return parseStringify(user);
   } catch (error) {
@@ -79,34 +120,41 @@ export const signUp = async ({ password, ...userData }: SignUpParams) => {
 
     if (!newUserAccount) throw new Error("Error creating user");
 
-    const dwollaCustomerUrl = await createDwollaCustomer({
-      ...userData,
-      type: "personal",
-    });
+    console.log("Appwrite account created:", newUserAccount.$id);
 
-    if (!dwollaCustomerUrl) throw new Error("Error creating Dwolla customer");
-
-    const dwollaCustomerId = extractCustomerIdFromUrl(dwollaCustomerUrl);
-
+    // Skip Dwolla for now - create user document without Dwolla dependency
     const newUser = await database.createDocument(
       DATABASE_ID!,
-      USER_COLLECTION_ID!,
+      USER_COLLECTION_NAME!,
       ID.unique(),
       {
-        ...userData,
-        userId: newUserAccount.$id,
-        dwollaCustomerId,
-        dwollaCustomerUrl,
+        username: email.split('@')[0], // Required username field
+        passwordHash: 'hashed_password_placeholder', // Required passwordHash field  
+        status: 'active', // Required status field
+        firstName,
+        lastName,
+        email,
+        address1: userData.address1 || '',
+        city: userData.city || '',
+        state: userData.state || '',
+        postalCode: userData.postalCode || '',
+        dateOfBirth: userData.dateOfBirth || '',
+        ssn: userData.ssn || '',
       }
     );
+
+    console.log("User document created in database");
 
     const session = await account.createEmailPasswordSession(email, password);
 
     setSessionCookie(session);
 
+    console.log("Session created and cookie set");
+
     return parseStringify(newUser);
   } catch (error) {
-    console.error("Error", error);
+    console.error("Sign up error:", error);
+    throw error;
   }
 };
 
@@ -114,14 +162,21 @@ export async function getLoggedInUser() {
   try {
     let user = null;
     const { account } = await createSessionClient();
-    if (account) {
-      const result = await account.get();
-      user = await getUserInfo({ userId: result.$id });
+    
+    if (!account) {
+      console.log("No account found in session client");
+      return null;
     }
+    
+    const result = await account.get();
+    console.log("Session user found:", result.$id);
+    
+    user = await getUserInfo({ email: result.email });
+    console.log("User document found:", !!user);
 
-    return parseStringify(user || "");
+    return parseStringify(user || null);
   } catch (error) {
-    console.log(error);
+    console.log("getLoggedInUser error:", error);
     return null;
   }
 }
@@ -170,7 +225,7 @@ export const createBankAccount = async ({
 
     const bankAccount = await database.createDocument(
       DATABASE_ID!,
-      BANK_COLLECTION_ID!,
+      BANK_COLLECTION_NAME!,
       ID.unique(),
       {
         userId,
@@ -206,31 +261,13 @@ export const exchangePublicToken = async ({
 
     const accountData = accountsResponse.data.accounts[0];
 
-    const request: ProcessorTokenCreateRequest = {
-      access_token: accessToken,
-      account_id: accountData.account_id,
-      processor: "dwolla" as ProcessorTokenCreateRequestProcessorEnum,
-    };
-
-    const processorTokenResponse = await plaidClient.processorTokenCreate(
-      request
-    );
-    const processorToken = processorTokenResponse.data.processor_token;
-
-    const fundingSourceUrl = await addFundingSource({
-      dwollaCustomerId: user.dwollaCustomerId,
-      processorToken,
-      bankName: accountData.name,
-    });
-
-    if (!fundingSourceUrl) throw Error;
-
+    // Skip Dwolla for now - just create bank account without funding source
     await createBankAccount({
       userId: user.$id,
       bankId: itemId,
       accountId: accountData.account_id,
       accessToken,
-      fundingSourceUrl,
+      fundingSourceUrl: '', // Empty for now
       shareableId: encryptId(accountData.account_id),
     });
 
@@ -250,7 +287,7 @@ export const getBanks = async ({ userId }: getBanksProps) => {
 
     const banks = await database.listDocuments(
       DATABASE_ID!,
-      BANK_COLLECTION_ID!,
+      BANK_COLLECTION_NAME!,
       [Query.equal("userId", [userId])]
     );
 
@@ -266,7 +303,7 @@ export const getBank = async ({ documentId }: getBankProps) => {
 
     const bank = await database.listDocuments(
       DATABASE_ID!,
-      BANK_COLLECTION_ID!,
+      BANK_COLLECTION_NAME!,
       [Query.equal("$id", [documentId])]
     );
 
@@ -284,7 +321,7 @@ export const getBankByAccountId = async ({
 
     const bank = await database.listDocuments(
       DATABASE_ID!,
-      BANK_COLLECTION_ID!,
+      BANK_COLLECTION_NAME!,
       [Query.equal("accountId", [accountId])]
     );
 
