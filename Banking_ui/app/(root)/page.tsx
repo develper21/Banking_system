@@ -13,12 +13,10 @@ const Home = async ({ searchParams: { id, page } }: SearchParamProps) => {
 
   const accounts = await getAccounts({ userId: loggedIn?.$id });
 
-  if (!accounts) return;
-
-  const accountsData = accounts?.data;
+  const accountsData = accounts?.data || [];
   const appwriteItemId = (id as string) || accountsData[0]?.appwriteItemId;
 
-  const account = await getAccount({ appwriteItemId });
+  const account = appwriteItemId ? await getAccount({ appwriteItemId }) : null;
 
   return (
     <section className="home">
@@ -33,8 +31,8 @@ const Home = async ({ searchParams: { id, page } }: SearchParamProps) => {
 
           <TotalBalanceBox
             accounts={accountsData}
-            totalBanks={accounts?.totalBanks}
-            totalCurrentBalance={accounts?.totalCurrentBalance}
+            totalBanks={accounts?.totalBanks || 0}
+            totalCurrentBalance={accounts?.totalCurrentBalance || 0}
           />
         </header>
 
@@ -48,7 +46,7 @@ const Home = async ({ searchParams: { id, page } }: SearchParamProps) => {
 
       <RightSideBar
         user={loggedIn}
-        transactions={account?.transactions}
+        transactions={account?.transactions || []}
         banks={accountsData?.slice(0, 2)}
       />
     </section>
