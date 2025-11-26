@@ -22,7 +22,7 @@ const Sidebar = ({ user }: SiderbarProps) => {
             alt="Foti Banking logo"
             className="size-[24px] max-xl:size-14"
           />
-          <h1 className="sidebar-logo">Foti Banking</h1>
+          <h1 className="sidebar-logo">Banking</h1>
         </Link>
 
         {sidebarLinks.map((link) => {
