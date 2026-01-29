@@ -3,6 +3,13 @@ import type { Metadata } from "next";
 import { Inter, IBM_Plex_Serif } from "next/font/google";
 import "./globals.css";
 import NotificationProvider from "@/components/NotificationProvider";
+import ErrorBoundary from "@/components/ErrorBoundary";
+import { logStartup } from "@/lib/startup-logger";
+
+// Initialize logging on app startup
+if (typeof window === 'undefined') {
+  logStartup();
+}
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const ibmPlexSerif = IBM_Plex_Serif({
@@ -27,7 +34,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} ${ibmPlexSerif.variable}`}>
-        <NotificationProvider>{children}</NotificationProvider>
+        <ErrorBoundary>
+          <NotificationProvider>{children}</NotificationProvider>
+        </ErrorBoundary>
       </body>
     </html>
   );
