@@ -16,7 +16,7 @@ Active URL: [https://banking-system-tau.vercel.app/](https://banking-system-tau.
 
 <br/>
 "
-<img src='/home/develper21/Documents/WebDev/Banking/public/image/dashboard.png' width="800px">
+<img src='https://github.com/develper21/Banking_system/blob/main/public/image/dashboard.png?raw=true' width="800px">
 
 <br/>
 
