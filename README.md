@@ -12,11 +12,11 @@
 
 Built with Next.js, Foti Banking is a full stack financial platform that connects to multiple bank accounts, displays transactions in real-time, allows users to transfer money to other platform users, and manages their finances altogether.
 
-Active URL: [foti-banking-app.vercel.app](foti-banking-app.vercel.app)
+Active URL: [https://banking-system-tau.vercel.app/](https://banking-system-tau.vercel.app/)
 
 <br/>
 "
-<img src='https://github.com/fotinh0/foti-banking-app/assets/67170897/b7af02ab-5383-45f9-bd11-d1b164a38240' width="800px">
+<img src='/home/develper21/Documents/WebDev/Banking/public/image/dashboard.png' width="800px">
 
 <br/>
 
@@ -78,8 +78,8 @@ Make sure you have the following installed on your machine:
 **Cloning the Repository**
 
 ```bash
-git clone https://github.com/fotinh0/foti-banking-app.git
-cd foti-banking-app
+git clone https://github.com/develper21/Banking_system.git
+cd Banking_system
 ```
 
 **Installation**
@@ -95,31 +95,37 @@ npm install
 Create a new file named `.env` in the root of your project and add the following content:
 
 ```env
-#NEXT
-NEXT_PUBLIC_SITE_URL=
+#NEXT CONFIGURATIONS
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
 
-#APPWRITE
-NEXT_PUBLIC_APPWRITE_ENDPOINT=https://cloud.appwrite.io/v1
-NEXT_PUBLIC_APPWRITE_PROJECT=
-APPWRITE_DATABASE_ID=
-APPWRITE_USER_COLLECTION_ID=
-APPWRITE_BANK_COLLECTION_ID=
-APPWRITE_TRANSACTION_COLLECTION_ID=
-APPWRITE_SECRET=
+#APPWRITE CONFIGURATIONS
+NEXT_PUBLIC_APPWRITE_ENDPOINT=https://nyc.cloud.appwrite.io/v1
+NEXT_PUBLIC_APPWRITE_PROJECT=YOUR-PROJECT-ID
+APPWRITE_DATABASE_ID=YOUR-DATABASE-ID
+APPWRITE_USER_COLLECTION_ID=YOUR-USER-COLLECTION-ID
+APPWRITE_ITEM_COLLECTION_ID=YOUR-ITEM-COLLECTION-ID
+APPWRITE_BANK_COLLECTION_ID=YOUR-BANK-COLLECTION-ID
+APPWRITE_TRANSACTION_COLLECTION_ID=YOUR-TRANSACTION-COLLECTION-ID
+NEXT_APPWRITE_KEY=YOUR-APPWRITE-KEY
 
-#PLAID
-PLAID_CLIENT_ID=
-PLAID_SECRET=
-PLAID_ENV=
-PLAID_PRODUCTS=
-PLAID_COUNTRY_CODES=
+#PLAID CONFIGURATIONS
+PLAID_CLIENT_ID=YOUR-PLAID-CLIENT-ID
+PLAID_SECRET=YOUR-PLAID-SECRET
+PLAID_ENV=YOUR-PLAID-ENV
+PLAID_PRODUCTS=YOUR-PLAID-PRODUCTS
+PLAID_COUNTRY_CODES=YOUR-PLAID-COUNTRY-CODES
 
-#DWOLLA
-DWOLLA_KEY=
-DWOLLA_SECRET=
-DWOLLA_BASE_URL=https://api-sandbox.dwolla.com
-DWOLLA_ENV=sandbox
+#DWOLLA CONFIGURATIONS
+DWOLLA_KEY=YOUR-DWOLLA-KEY
+DWOLLA_SECRET=YOUR-DWOLLA-SECRET
+DWOLLA_BASE_URL=YOUR-DWOLLA-BASE-URL
+DWOLLA_ENV=YOUR-DWOLLA-ENV
 
+# SENTRY CONFIGURATIONS
+SENTRY_AUTH_TOKEN=YOUR-SENTRY-AUTH-TOKEN
+SENTRY_ORG=your_org_slug
+SENTRY_PROJECT=your_project_slug
+SENTRY_URL=https://sentry.io/
 ```
 
 Replace the placeholder values with your actual respective account credentials. You can obtain these credentials by signing up on the [Appwrite](https://appwrite.io/?utm_source=youtube&utm_content=reactnative&ref=JSmastery), [Plaid](https://plaid.com/) and [Dwolla](https://www.dwolla.com/)
