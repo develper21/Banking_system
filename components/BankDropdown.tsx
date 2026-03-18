@@ -20,7 +20,29 @@ export const BankDropdown = ({
 }: BankDropdownProps) => {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [selected, setSeclected] = useState(accounts[0]);
+  const [selected, setSeclected] = useState(accounts[0] || null);
+
+  // Handle case when no accounts available
+  if (!accounts || accounts.length === 0) {
+    return (
+      <div className={`flex w-full bg-white gap-3 md:w-[300px] ${otherStyles}`}>
+        <Image
+          src="icons/credit-card.svg"
+          width={20}
+          height={20}
+          alt="account"
+          color="fill-lime-600"
+        />
+        <p className="line-clamp-1 w-full text-left text-gray-500">
+          No accounts available
+        </p>
+      </div>
+    );
+  }
+
+  if (!selected) {
+    return null;
+  }
 
   const handleBankChange = (id: string) => {
     const account = accounts.find((account) => account.appwriteItemId === id)!;

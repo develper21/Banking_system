@@ -9,8 +9,13 @@ import { getBanks, getBank } from "./user.actions";
 export const getAccounts = async ({ userId }: getAccountsProps) => {
   try {
     const banks = await getBanks({ userId });
+    
+    if (!banks || banks.length === 0) {
+      return parseStringify({ data: [], totalBanks: 0, totalCurrentBalance: 0 });
+    }
+    
     const accounts = await Promise.all(
-      banks?.map(async (bank: Bank) => {
+      banks.map(async (bank: Bank) => {
         const accountsResponse = await plaidClient.accountsGet({
           access_token: bank.accessToken,
         });
@@ -51,7 +56,23 @@ export const getAccounts = async ({ userId }: getAccountsProps) => {
 
 export const getAccount = async ({ appwriteItemId }: getAccountProps) => {
   try {
+    if (!appwriteItemId) {
+      console.warn("getAccount: appwriteItemId is missing");
+      return parseStringify({ data: null, transactions: [] });
+    }
+
     const bank = await getBank({ documentId: appwriteItemId });
+
+    if (!bank) {
+      console.warn(`getAccount: no bank found for appwriteItemId=${appwriteItemId}`);
+      return parseStringify({ data: null, transactions: [] });
+    }
+
+    if (!bank.accessToken) {
+      console.warn(`getAccount: bank missing access token for bankId=${bank.$id}`);
+      return parseStringify({ data: null, transactions: [] });
+    }
+
     const accountsResponse = await plaidClient.accountsGet({
       access_token: bank.accessToken,
     });
@@ -112,7 +133,7 @@ export const getInstitution = async ({
   try {
     const institutionResponse = await plaidClient.institutionsGetById({
       institution_id: institutionId,
-      country_codes: ["US"] as CountryCode[],
+      country_codes: ["US", "IN"] as CountryCode[],
     });
 
     const intitution = institutionResponse.data.institution;
@@ -137,7 +158,7 @@ export const getTransactions = async ({
 
       const data = response.data;
 
-      transactions = response.data.added.map((transaction) => ({
+      const fetchedTransactions = response.data.added.map((transaction) => ({
         id: transaction.transaction_id,
         name: transaction.name,
         paymentChannel: transaction.payment_channel,
@@ -150,11 +171,13 @@ export const getTransactions = async ({
         image: transaction.logo_url,
       }));
 
+      transactions = [...transactions, ...fetchedTransactions];
       hasMore = data.has_more;
     }
 
     return parseStringify(transactions);
   } catch (error) {
     console.error("An error occurred while getting the accounts:", error);
+    return parseStringify([]);
   }
 };

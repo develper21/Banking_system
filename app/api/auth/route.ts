@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/appwrite'
 import { log } from '@/lib/logger'
-import { ValidationError, AuthenticationError, createErrorResponse } from '@/lib/error-handler'
+import { ValidationError, createErrorResponse } from '@/lib/error-handler'
 
 export async function POST(request: NextRequest) {
   const startTime = Date.now()

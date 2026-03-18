@@ -6,8 +6,6 @@ import { cookies } from "next/headers";
 import { encryptId, parseStringify } from "../utils";
 import {
   CountryCode,
-  ProcessorTokenCreateRequest,
-  ProcessorTokenCreateRequestProcessorEnum,
   Products,
 } from "plaid";
 import { plaidClient } from "@/lib/plaid";
@@ -21,12 +19,13 @@ const {
 
 const isProduction = process.env.NODE_ENV === "production";
 
-const setSessionCookie = (session: Models.Session) => {
+const setSessionCookie = async (session: Models.Session) => {
   if (!session.secret) {
     throw new Error("Appwrite session secret missing");
   }
 
-  cookies().set("appwrite-session", session.secret, {
+  const cookieStore = await cookies();
+  cookieStore.set("appwrite-session", session.secret, {
     path: "/",
     httpOnly: true,
     sameSite: "strict",
@@ -68,7 +67,7 @@ export const signIn = async ({ email, password }: signInProps) => {
     const { account, database } = await createAdminClient();
     const session = await account.createEmailPasswordSession(email, password);
 
-    setSessionCookie(session);
+    await setSessionCookie(session);
 
     let user = await getUserInfo({ email });
 
@@ -147,7 +146,7 @@ export const signUp = async ({ password, ...userData }: SignUpParams) => {
 
     const session = await account.createEmailPasswordSession(email, password);
 
-    setSessionCookie(session);
+    await setSessionCookie(session);
 
     console.log("Session created and cookie set");
 
@@ -185,7 +184,7 @@ export const logoutAccount = async () => {
   try {
     const { account } = await createSessionClient();
 
-    cookies().delete("appwrite-session");
+    (await cookies()).delete("appwrite-session");
     if (account) await account.deleteSession("current");
   } catch (error) {
     return null;
@@ -194,21 +193,35 @@ export const logoutAccount = async () => {
 
 export const createLinkToken = async (user: User) => {
   try {
+    console.log("Creating link token for user:", {
+      userId: user.$id,
+      firstName: user.firstName,
+      lastName: user.lastName
+    });
+    
+    if (!user.$id || !user.firstName || !user.lastName) {
+      throw new Error("Invalid user data: missing required fields");
+    }
+
     const tokenParams = {
       user: {
         client_user_id: user.$id,
       },
       client_name: `${user.firstName} ${user.lastName}`,
       products: ["auth"] as Products[],
-      language: "en",
       country_codes: ["US"] as CountryCode[],
+      language: "en",
     };
+
+    console.log("Token params:", tokenParams);
 
     const response = await plaidClient.linkTokenCreate(tokenParams);
 
+    console.log("Link token created successfully");
     return parseStringify({ linkToken: response.data.link_token });
   } catch (error) {
-    console.log(error);
+    console.error("Plaid link token error:", error);
+    throw error;
   }
 };
 
@@ -294,6 +307,7 @@ export const getBanks = async ({ userId }: getBanksProps) => {
     return parseStringify(banks.documents);
   } catch (error) {
     console.log(error);
+    return [];
   }
 };
 

@@ -77,7 +77,7 @@ const FormItem = React.forwardRef<
 
   return (
     <FormItemContext.Provider value={{ id }}>
-      <div ref={ref} className={cn("space-y-2", className)} {...props} />
+      <div className={cn("space-y-2", className)} {...props} />
     </FormItemContext.Provider>
   )
 })
@@ -101,23 +101,34 @@ const FormLabel = React.forwardRef<
 FormLabel.displayName = "FormLabel"
 
 const FormControl = React.forwardRef<
-  React.ElementRef<typeof Slot>,
-  React.ComponentPropsWithoutRef<typeof Slot>
->(({ ...props }, ref) => {
+  HTMLElement,
+  React.HTMLAttributes<HTMLElement>
+>(({ children, ...props }, ref) => {
   const { error, formItemId, formDescriptionId, formMessageId } = useFormField()
 
+  const accessibilityProps = {
+    id: formItemId,
+    "aria-describedby": !error
+      ? `${formDescriptionId}`
+      : `${formDescriptionId} ${formMessageId}`,
+    "aria-invalid": !!error,
+  }
+
+  const child = React.Children.only(children)
+
+  if (React.isValidElement(child)) {
+    return React.cloneElement(child, {
+      ref,
+      ...accessibilityProps,
+      ...child.props,
+      ...props,
+    })
+  }
+
   return (
-    <Slot
-      ref={ref}
-      id={formItemId}
-      aria-describedby={
-        !error
-          ? `${formDescriptionId}`
-          : `${formDescriptionId} ${formMessageId}`
-      }
-      aria-invalid={!!error}
-      {...props}
-    />
+    <div ref={ref as React.Ref<HTMLDivElement>} {...accessibilityProps} {...props}>
+      {children}
+    </div>
   )
 })
 FormControl.displayName = "FormControl"

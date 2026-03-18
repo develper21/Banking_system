@@ -93,7 +93,12 @@ const PaymentTransferForm = ({ accounts }: PaymentTransferFormProps) => {
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(submit)} className="flex flex-col">
+      <form onSubmit={form.handleSubmit(submit)} className="flex flex-col gap-6">
+        <div className="flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <p className="text-14 font-semibold text-gray-700">Source bank selection</p>
+          <p className="text-12 text-gray-500">Choose your source account to transfer funds from.</p>
+        </div>
+
         <FormField
           control={form.control}
           name="senderBank"

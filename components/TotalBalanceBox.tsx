@@ -1,4 +1,3 @@
-import React from "react";
 import AnimatedCounter from "./AnimatedCounter";
 import DoughnutChart from "./DoughnutChart";
 

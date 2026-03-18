@@ -27,7 +27,15 @@ export function proxy(request: NextRequest) {
   response.headers.set('Referrer-Policy', 'strict-origin-when-cross-origin')
   response.headers.set(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:;"
+    "default-src 'self'; " +
+      "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.plaid.com https://*.plaid.com http://localhost:3000 blob:; " +
+      "worker-src 'self' blob: https://cdn.plaid.com https://*.plaid.com; " +
+      "child-src 'self' blob:; " +
+      "connect-src 'self' https://*.plaid.com https://plaid.com http://localhost:3000; " +
+      "frame-src 'self' https://cdn.plaid.com https://*.plaid.com; " +
+      "img-src 'self' data: https://*.plaid.com; " +
+      "style-src 'self' 'unsafe-inline' https://cdn.plaid.com; " +
+      "font-src 'self' data:;"
   )
 
   // Calculate and log response time

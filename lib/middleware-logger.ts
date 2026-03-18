@@ -18,7 +18,7 @@ export function logRequest(request: NextRequest, responseTime?: number, statusCo
       method,
       path,
       userAgent,
-      ip: request.ip || 'unknown',
+      ip: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown',
       headers: Object.fromEntries(request.headers.entries())
     })
   }

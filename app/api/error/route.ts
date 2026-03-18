@@ -3,7 +3,7 @@ import { logError, createErrorResponse } from '@/lib/error-handler'
 
 export async function POST(request: NextRequest) {
   try {
-    const { error, context, userAgent, url } = await request.json()
+    const { error, context } = await request.json()
 
     if (!error) {
       return NextResponse.json(

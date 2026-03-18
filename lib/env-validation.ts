@@ -18,7 +18,7 @@ const envSchema = z.object({
   PLAID_CLIENT_ID: z.string().min(1),
   PLAID_SECRET: z.string().min(1),
   PLAID_ENV: z.enum(['sandbox', 'development', 'production']),
-  PLAID_PRODUCTS: z.string().optional(),
+  PLAID_WEBHOOK_URL: z.string().url().optional(),
   PLAID_COUNTRY_CODES: z.string().optional(),
 
   // Dwolla

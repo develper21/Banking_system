@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSessionClient } from '@/lib/appwrite'
 import { plaidClient } from '@/lib/plaid'
+import { CountryCode, Products } from 'plaid'
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,8 +27,8 @@ export async function POST(request: NextRequest) {
         client_user_id: userId,
       },
       client_name: 'Banking App',
-      products: ['auth', 'transactions'],
-      country_codes: ['US', 'IN'],
+      products: ['auth', 'transactions'] as Products[],
+      country_codes: ['US', 'IN'] as CountryCode[],
       language: 'en',
     }
 

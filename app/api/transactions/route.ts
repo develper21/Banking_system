@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createSessionClient } from '@/lib/appwrite'
+import { createSessionClient, createAdminClient } from '@/lib/appwrite'
+import { Query } from 'node-appwrite'
 
 export async function GET(request: NextRequest) {
   try {
@@ -15,7 +16,8 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    const { account, database } = await createSessionClient()
+    const { account } = await createSessionClient()
+    const { database } = await createAdminClient()
     if (!account) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -29,11 +31,11 @@ export async function GET(request: NextRequest) {
       process.env.APPWRITE_DATABASE_ID!,
       process.env.APPWRITE_TRANSACTION_COLLECTION_NAME!,
       [
-        { field: 'userId', value: userId, operator: '=' },
-        { field: 'createdAt', order: 'desc' }
-      ],
-      limit,
-      offset
+        Query.equal('userId', userId),
+        Query.orderDesc('$createdAt'),
+        Query.limit(limit),
+        Query.offset(offset)
+      ]
     )
 
     return NextResponse.json({
@@ -74,7 +76,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { account, database } = await createSessionClient()
+    const { account } = await createSessionClient()
+    const { database } = await createAdminClient()
     if (!account) {
       return NextResponse.json(
         { error: 'Unauthorized' },

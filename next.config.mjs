@@ -13,6 +13,31 @@ const nextConfig = {
   compress: true,
   poweredByHeader: false,
   
+  // Content Security Policy for Plaid
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: [
+              "default-src 'self';",
+              "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://cdn.plaid.com https://*.plaid.com http://localhost:3000;",
+              "worker-src 'self' blob:;",
+              "child-src 'self' blob:;",
+              "connect-src 'self' https://*.plaid.com https://plaid.com http://localhost:3000;",
+              "frame-src 'self' https://cdn.plaid.com;",
+              "img-src 'self' data: https://*.plaid.com;",
+              "style-src 'self' 'unsafe-inline';",
+              "font-src 'self' data:;"
+            ].join(' ')
+          }
+        ]
+      }
+    ];
+  },
+  
   // Image optimization
   images: {
     remotePatterns: [

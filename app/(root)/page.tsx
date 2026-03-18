@@ -5,8 +5,10 @@ import TotalBalanceBox from "@/components/TotalBalanceBox";
 import { getAccount, getAccounts } from "@/lib/actions/bank.actions";
 import { getLoggedInUser } from "@/lib/actions/user.actions";
 
-const Home = async ({ searchParams: { id, page } }: SearchParamProps) => {
-  const currentPage = Number(page as string) || 1;
+const Home = async ({ searchParams }: SearchParamProps) => {
+  const id = searchParams?.id as string | undefined;
+  const page = searchParams?.page as string | undefined;
+  const currentPage = Number(page) || 1;
   const loggedIn = await getLoggedInUser();
 
   if (!loggedIn || loggedIn === null) return;

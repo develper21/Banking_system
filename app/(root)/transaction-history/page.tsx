@@ -4,21 +4,42 @@ import TransactionsTable from "@/components/TransactionsTable";
 import { getAccount, getAccounts } from "@/lib/actions/bank.actions";
 import { getLoggedInUser } from "@/lib/actions/user.actions";
 import { formatAmount } from "@/lib/utils";
-import React from "react";
 
-const TransactionHistory = async ({
-  searchParams: { id, page },
-}: SearchParamProps) => {
-  const currentPage = Number(page as string) || 1;
+const TransactionHistory = async ({ searchParams }: SearchParamProps) => {
+  const id = searchParams?.id as string | undefined;
+  const page = searchParams?.page as string | undefined;
+  const currentPage = Number(page) || 1;
   const loggedIn = await getLoggedInUser();
-  const accounts = await getAccounts({
-    userId: loggedIn.$id,
-  });
 
-  if (!accounts) return;
+  if (!loggedIn?.$id) {
+    return (
+      <div className="transactions">
+        <p className="text-center text-red-500">Please sign in to view transaction history.</p>
+      </div>
+    );
+  }
 
-  const accountsData = accounts?.data;
-  const appwriteItemId = (id as string) || accountsData[0]?.appwriteItemId;
+  const accounts = await getAccounts({ userId: loggedIn.$id });
+
+  const accountsData = accounts?.data ?? [];
+
+  if (!accountsData.length) {
+    return (
+      <div className="transactions">
+        <p className="text-center text-gray-300">No linked bank accounts. Please connect a bank first.</p>
+      </div>
+    );
+  }
+
+  const appwriteItemId = id || accountsData[0]?.appwriteItemId;
+
+  if (!appwriteItemId) {
+    return (
+      <div className="transactions">
+        <p className="text-center text-gray-300">Unable to determine selected bank account.</p>
+      </div>
+    );
+  }
 
   const account = await getAccount({ appwriteItemId });
 
