@@ -4,9 +4,9 @@ import { Inter, IBM_Plex_Serif } from "next/font/google";
 import "./globals.css";
 import NotificationProvider from "@/components/NotificationProvider";
 import ErrorBoundary from "@/components/ErrorBoundary";
+import { SWRProvider } from "@/components/SWRProvider";
 import { logStartup } from "@/lib/startup-logger";
 
-// Initialize logging on app startup
 if (typeof window === 'undefined') {
   logStartup();
 }
@@ -35,7 +35,9 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${inter.variable} ${ibmPlexSerif.variable}`}>
         <ErrorBoundary>
-          <NotificationProvider>{children}</NotificationProvider>
+          <SWRProvider>
+            <NotificationProvider>{children}</NotificationProvider>
+          </SWRProvider>
         </ErrorBoundary>
       </body>
     </html>
