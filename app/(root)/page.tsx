@@ -6,8 +6,15 @@ import { getAccount, getAccounts } from "@/lib/actions/bank.actions";
 import { getLoggedInUser } from "@/lib/actions/user.actions";
 
 const Home = async ({ searchParams }: SearchParamProps) => {
-  const id = searchParams?.id as string | undefined;
-  const page = searchParams?.page as string | undefined;
+  const resolvedSearchParams = (await searchParams) as
+    | SearchParamProps["searchParams"]
+    | undefined;
+
+  const idParam = resolvedSearchParams?.id;
+  const pageParam = resolvedSearchParams?.page;
+
+  const id = Array.isArray(idParam) ? idParam[0] : idParam;
+  const page = Array.isArray(pageParam) ? pageParam[0] : pageParam;
   const currentPage = Number(page) || 1;
   const loggedIn = await getLoggedInUser();
 
