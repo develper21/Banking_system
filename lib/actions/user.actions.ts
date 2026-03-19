@@ -9,6 +9,7 @@ import {
   Products,
 } from "plaid";
 import { plaidClient } from "@/lib/plaid";
+import { createDwollaCustomer, addFundingSource } from "./dwolla.actions";
 import { revalidatePath } from "next/cache";
 
 const {
@@ -45,7 +46,7 @@ export const getUserInfo = async ({ email }: { email: string }) => {
     const user = await database.listDocuments(
       DATABASE_ID!,
       USER_COLLECTION_NAME!,
-      [Query.equal("email", [email])]
+      [Query.equal("email", email)]
     );
 
     const userDocument = user.documents[0];
@@ -121,15 +122,36 @@ export const signUp = async ({ password, ...userData }: SignUpParams) => {
 
     console.log("Appwrite account created:", newUserAccount.$id);
 
-    // Skip Dwolla for now - create user document without Dwolla dependency
+    let dwollaCustomerUrl: string | null = null;
+    
+    // Create Dwolla customer for transfers
+    try {
+      dwollaCustomerUrl = await createDwollaCustomer({
+        firstName,
+        lastName,
+        email,
+        type: 'personal',
+        address1: userData.address1 || '',
+        city: userData.city || '',
+        state: userData.state || '',
+        postalCode: userData.postalCode || '',
+        dateOfBirth: userData.dateOfBirth || '',
+        ssn: userData.ssn || '',
+      });
+      console.log("Dwolla customer created:", dwollaCustomerUrl);
+    } catch (dwollaError) {
+      console.error("Dwolla customer creation failed:", dwollaError);
+      // Continue without Dwolla - user can still link banks but can't transfer
+    }
+
     const newUser = await database.createDocument(
       DATABASE_ID!,
       USER_COLLECTION_NAME!,
       ID.unique(),
       {
-        username: email.split('@')[0], // Required username field
-        passwordHash: 'hashed_password_placeholder', // Required passwordHash field  
-        status: 'active', // Required status field
+        username: email.split('@')[0],
+        passwordHash: 'hashed_password_placeholder',
+        status: 'active',
         firstName,
         lastName,
         email,
@@ -214,13 +236,22 @@ export const createLinkToken = async (user: User) => {
     };
 
     console.log("Token params:", tokenParams);
+    console.log("Plaid environment:", {
+      clientId: process.env.PLAID_CLIENT_ID?.substring(0, 8) + "...",
+      env: process.env.PLAID_ENV
+    });
 
     const response = await plaidClient.linkTokenCreate(tokenParams);
 
     console.log("Link token created successfully");
     return parseStringify({ linkToken: response.data.link_token });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Plaid link token error:", error);
+    console.error("Error details:", {
+      status: error?.response?.status,
+      data: error?.response?.data,
+      message: error?.message
+    });
     throw error;
   }
 };
@@ -273,14 +304,42 @@ export const exchangePublicToken = async ({
     });
 
     const accountData = accountsResponse.data.accounts[0];
+    
+    // Create Dwolla processor token for funding source
+    let fundingSourceUrl = '';
+    if (user.dwollaCustomerId) {
+      try {
+        // Create processor token for Dwolla
+        const processorTokenResponse = await plaidClient.processorTokenCreate({
+          access_token: accessToken,
+          account_id: accountData.account_id,
+          processor: 'dwolla' as any,
+        });
+        
+        const processorToken = processorTokenResponse.data.processor_token;
+        
+        // Add funding source to Dwolla customer
+        const fundingSourceResult = await addFundingSource({
+          dwollaCustomerId: user.dwollaCustomerId,
+          processorToken,
+          bankName: accountData.name,
+        });
+        
+        fundingSourceUrl = fundingSourceResult || '';
+        
+        console.log("Dwolla funding source created:", fundingSourceUrl);
+      } catch (dwollaError) {
+        console.error("Dwolla funding source creation failed:", dwollaError);
+        // Continue without funding source - user can still view bank data
+      }
+    }
 
-    // Skip Dwolla for now - just create bank account without funding source
     await createBankAccount({
       userId: user.$id,
       bankId: itemId,
       accountId: accountData.account_id,
       accessToken,
-      fundingSourceUrl: '', // Empty for now
+      fundingSourceUrl,
       shareableId: encryptId(accountData.account_id),
     });
 
@@ -295,18 +354,54 @@ export const exchangePublicToken = async ({
 };
 
 export const getBanks = async ({ userId }: getBanksProps) => {
-  try {
-    const { database } = await createAdminClient();
+  if (!userId) {
+    return [];
+  }
 
-    const banks = await database.listDocuments(
+  const { database } = await createAdminClient();
+
+  try {
+    // Prefer client-side filtering to avoid Appwrite schema mismatch issues
+    const allBanks = await database.listDocuments(
       DATABASE_ID!,
-      BANK_COLLECTION_NAME!,
-      [Query.equal("userId", [userId])]
+      BANK_COLLECTION_NAME!
     );
 
-    return parseStringify(banks.documents);
-  } catch (error) {
-    console.log(error);
+    return parseStringify(
+      allBanks.documents.filter(
+        (bank: any) => bank.userId === userId || bank.user_id === userId
+      )
+    );
+  } catch (error: any) {
+    const errorMessage =
+      typeof error?.response === "string"
+        ? error.response
+        : error?.response?.message || error?.message || JSON.stringify(error);
+
+    console.error("getBanks error:", errorMessage);
+
+    // Additional fallback: no filter query in case of schema mismatch
+    if (errorMessage.includes("Attribute not found in schema")) {
+      console.warn(
+        "Appwrite collection schema is missing userId attribute; attempting full scan fallback"
+      );
+      try {
+        const allBanks = await database.listDocuments(
+          DATABASE_ID!,
+          BANK_COLLECTION_NAME!
+        );
+
+        return parseStringify(
+          allBanks.documents.filter(
+            (bank: any) => bank.userId === userId || bank.user_id === userId
+          )
+        );
+      } catch (innerError) {
+        console.error("getBanks fallback scan error:", innerError);
+        return [];
+      }
+    }
+
     return [];
   }
 };
