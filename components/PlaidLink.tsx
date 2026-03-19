@@ -59,6 +59,7 @@ const PlaidLink = ({ user, variant }: PlaidLinkProps) => {
           user,
         });
         router.push("/");
+        router.refresh();
       } catch (err: any) {
         console.error("Failed to exchange public token:", err);
         setError("Failed to connect bank. Please try again.");
