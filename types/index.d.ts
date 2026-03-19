@@ -325,3 +325,11 @@ declare interface getBankProps {
 declare interface getBankByAccountIdProps {
   accountId: string;
 }
+
+declare interface TransferFundsParams {
+  sourceFundingSourceUrl: string;
+  destinationFundingSourceUrl: string;
+  amount: string;
+  senderBankId: string;
+  receiverBankId: string;
+}
