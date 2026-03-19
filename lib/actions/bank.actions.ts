@@ -5,6 +5,9 @@ import { plaidClient } from "../plaid";
 import { parseStringify } from "../utils";
 import { getTransactionsByBankId } from "./transaction.actions";
 import { getBanks, getBank } from "./user.actions";
+import { createTransfer } from "./dwolla.actions";
+import { createTransaction } from "./transaction.actions";
+import { revalidatePath } from "next/cache";
 
 export const getAccounts = async ({ userId }: getAccountsProps) => {
   try {
@@ -179,5 +182,54 @@ export const getTransactions = async ({
   } catch (error) {
     console.error("An error occurred while getting the accounts:", error);
     return parseStringify([]);
+  }
+};
+
+// Transfer funds between bank accounts using Dwolla
+export const transferFunds = async ({ 
+  sourceFundingSourceUrl, 
+  destinationFundingSourceUrl, 
+  amount,
+  senderBankId,
+  receiverBankId,
+  senderId,
+  receiverId,
+  email,
+}: TransferFundsParams & { senderId: string; receiverId: string; email: string }) => {
+  try {
+    // Create transfer via Dwolla
+    const transferUrl = await createTransfer({
+      sourceFundingSourceUrl,
+      destinationFundingSourceUrl,
+      amount,
+    });
+
+    if (!transferUrl) {
+      throw new Error("Transfer creation failed");
+    }
+
+    // Store transaction in database
+    const transaction = {
+      name: "Transfer",
+      amount,
+      senderId,
+      senderBankId,
+      receiverId,
+      receiverBankId,
+      email,
+    };
+
+    const newTransaction = await createTransaction(transaction);
+
+    // Revalidate the path to update UI
+    revalidatePath("/");
+
+    return parseStringify({
+      transferUrl,
+      transaction: newTransaction,
+    });
+  } catch (error) {
+    console.error("Transfer fund failed:", error);
+    throw error;
   }
 };
