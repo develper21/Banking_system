@@ -8,9 +8,36 @@ import { getBanks, getBank } from "./user.actions";
 import { createTransfer } from "./dwolla.actions";
 import { createTransaction } from "./transaction.actions";
 import { revalidatePath } from "next/cache";
+import { getBanksForTestUser, getAccountBalanceForTestUser } from "./mock-data.actions";
 
 export const getAccounts = async ({ userId }: getAccountsProps) => {
   try {
+    // Handle test user with mock data
+    if (userId === 'test-user-demo') {
+      const mockBanks = await getBanksForTestUser({ userId });
+      const mockBalance = await getAccountBalanceForTestUser({ userId });
+      
+      const accounts = mockBanks.map((bank: any) => ({
+        id: bank.accountId,
+        availableBalance: bank.availableBalance,
+        currentBalance: bank.currentBalance,
+        institutionId: bank.bankId,
+        name: bank.bankName,
+        officialName: bank.bankName,
+        mask: bank.mask,
+        type: bank.type,
+        subtype: bank.type,
+        appwriteItemId: bank.$id,
+        shareableId: bank.shareableId,
+      }));
+
+      return parseStringify({ 
+        data: accounts, 
+        totalBanks: accounts.length, 
+        totalCurrentBalance: mockBalance?.totalBalance || 0 
+      });
+    }
+
     const banks = await getBanks({ userId });
     
     if (!banks || banks.length === 0) {
@@ -62,6 +89,52 @@ export const getAccount = async ({ appwriteItemId }: getAccountProps) => {
     if (!appwriteItemId) {
       console.warn("getAccount: appwriteItemId is missing");
       return parseStringify({ data: null, transactions: [] });
+    }
+
+    // Handle test user with mock data
+    if (appwriteItemId.startsWith('mock-bank-')) {
+      const { getTransactionsByBankForTestUser } = await import("./mock-data.actions");
+      const mockTransactions = await getTransactionsByBankForTestUser({ bankId: appwriteItemId });
+      
+      // Find the mock bank data
+      const { getBanksForTestUser } = await import("./mock-data.actions");
+      const mockBanks = await getBanksForTestUser({ userId: 'test-user-demo' });
+      const mockBank = mockBanks.find((bank: any) => bank.$id === appwriteItemId);
+      
+      if (!mockBank) {
+        return parseStringify({ data: null, transactions: [] });
+      }
+
+      const account = {
+        id: mockBank.accountId,
+        availableBalance: mockBank.availableBalance,
+        currentBalance: mockBank.currentBalance,
+        institutionId: mockBank.bankId,
+        name: mockBank.bankName,
+        officialName: mockBank.bankName,
+        mask: mockBank.mask,
+        type: mockBank.type,
+        subtype: mockBank.type,
+        appwriteItemId: mockBank.$id,
+      };
+
+      const transactions = mockTransactions.map((txn: any) => ({
+        id: txn.$id,
+        name: txn.name,
+        paymentChannel: txn.paymentChannel,
+        type: txn.type,
+        accountId: txn.accountId,
+        amount: Math.abs(txn.amount),
+        pending: false,
+        category: txn.category,
+        date: txn.date,
+        image: null,
+      }));
+
+      return parseStringify({
+        data: account,
+        transactions: transactions,
+      });
     }
 
     const bank = await getBank({ documentId: appwriteItemId });
