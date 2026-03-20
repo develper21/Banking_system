@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSessionClient, createAdminClient } from '@/lib/appwrite'
 import { Query } from 'node-appwrite'
+import { getTransactionsForTestUser } from '@/lib/actions/mock-data.actions'
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,6 +15,24 @@ export async function GET(request: NextRequest) {
         { error: 'User ID is required' },
         { status: 400 }
       )
+    }
+
+    // Handle test user with mock data
+    if (userId === 'test-user-demo') {
+      const allTransactions = await getTransactionsForTestUser({ userId })
+      const offset = (page - 1) * limit
+      const paginatedTransactions = allTransactions.slice(offset, offset + limit)
+      
+      return NextResponse.json({
+        success: true,
+        data: paginatedTransactions,
+        pagination: {
+          page,
+          limit,
+          total: allTransactions.length,
+          pages: Math.ceil(allTransactions.length / limit)
+        }
+      })
     }
 
     const { account } = await createSessionClient()
