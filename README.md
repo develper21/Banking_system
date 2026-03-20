@@ -1,4 +1,4 @@
-## Banking App
+## CashFlow Banking Platform
 
 ## <a name="table">Table of Contents</a>
 
@@ -10,19 +10,19 @@
 
 ## <a name="introduction">Introduction</a>
 
-Built with Next.js, Foti Banking is a full stack financial platform that connects to multiple bank accounts, displays transactions in real-time, allows users to transfer money to other platform users, and manages their finances altogether.
+Built with Next.js, CashFlow is a full stack financial platform that connects to multiple bank accounts, displays transactions in real-time, allows users to transfer money to other platform users, and manages their finances altogether.
 
 Active URL: [https://banking-system-tau.vercel.app/](https://banking-system-tau.vercel.app/)
 
 <br/>
 "
-<img src='https://github.com/develper21/Banking_system/blob/main/public/image/dashboard.png?raw=true' width="800px">
+<img src='https://github.com/develper21/Banking_system/blob/main/public/image/cashflow.png?raw=true' width="800px">
 
 <br/>
 
 # NOTE:
 
-To check out the application with a test account, you can use the following credentials -> email: rayred@fotibanking.com, pw: abcd1234
+To check out the application with a test account, you can use the following credentials -> email: rayred@cashflow.com, pw: abcd1234
 
 If you want to create you own account without connecting your bank information, you can use Plaid's test credentials to add dummy bank accounts to your profile: 
 - Step 1: Click 'Continue' and select Chase as the institution.
