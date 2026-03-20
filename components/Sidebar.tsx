@@ -19,10 +19,10 @@ const Sidebar = ({ user }: SiderbarProps) => {
             src="/icons/logo.svg"
             width={34}
             height={34}
-            alt="Foti Banking logo"
+            alt="CashFlow logo"
             className="size-[24px] max-xl:size-14"
           />
-          <h1 className="sidebar-logo">Banking</h1>
+          <h1 className="sidebar-logo">CashFlow</h1>
         </Link>
 
         {sidebarLinks.map((link) => {
