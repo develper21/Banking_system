@@ -11,6 +11,7 @@ import {
 import { plaidClient } from "@/lib/plaid";
 import { createDwollaCustomer, addFundingSource } from "./dwolla.actions";
 import { revalidatePath } from "next/cache";
+import { isTestUser, TEST_USER_DATA } from "../test-user";
 
 const {
   APPWRITE_DATABASE_ID: DATABASE_ID,
@@ -65,6 +66,20 @@ export const getUserInfo = async ({ email }: { email: string }) => {
 
 export const signIn = async ({ email, password }: signInProps) => {
   try {
+    // Check if this is the test user
+    if (isTestUser(email, password)) {
+      // Set a special session cookie for test user
+      const cookieStore = await cookies();
+      cookieStore.set("test-user-session", "demo-session", {
+        path: "/",
+        httpOnly: true,
+        sameSite: "strict",
+        secure: isProduction,
+      });
+
+      return parseStringify(TEST_USER_DATA);
+    }
+
     const { account, database } = await createAdminClient();
     const session = await account.createEmailPasswordSession(email, password);
 
@@ -182,6 +197,16 @@ export const signUp = async ({ password, ...userData }: SignUpParams) => {
 export async function getLoggedInUser() {
   try {
     let user = null;
+    
+    // Check if this is a test user session
+    const cookieStore = await cookies();
+    const testSession = cookieStore.get("test-user-session");
+    
+    if (testSession?.value === "demo-session") {
+      console.log("Test user session found");
+      return parseStringify(TEST_USER_DATA);
+    }
+    
     const { account } = await createSessionClient();
     
     if (!account) {
@@ -204,9 +229,11 @@ export async function getLoggedInUser() {
 
 export const logoutAccount = async () => {
   try {
+    // Clear test user session if exists
+    const cookieStore = await cookies();
+    cookieStore.delete("test-user-session");
+    
     const { account } = await createSessionClient();
-
-    (await cookies()).delete("appwrite-session");
     if (account) await account.deleteSession("current");
   } catch (error) {
     return null;
