@@ -3,6 +3,7 @@ import Sidebar from "@/components/Sidebar";
 import { getLoggedInUser } from "@/lib/actions/user.actions";
 import Image from "next/image";
 import { redirect } from "next/navigation";
+import TestUserIndicator from "@/components/TestUserIndicator";
 
 export default async function RootLayout({
   children,
@@ -26,6 +27,9 @@ export default async function RootLayout({
         </div>
         {children}
       </div>
+      
+      {/* Show demo indicator for test user */}
+      {loggedIn.$id === 'test-user-demo' && <TestUserIndicator />}
     </main>
   );
 }
