@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getBanks } from "@/lib/actions/user.actions";
+import { getBanksForTestUser } from "@/lib/actions/mock-data.actions";
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,6 +12,12 @@ export async function GET(request: NextRequest) {
         { error: "User ID is required" },
         { status: 400 }
       );
+    }
+
+    // Handle test user with mock data
+    if (userId === 'test-user-demo') {
+      const banks = await getBanksForTestUser({ userId });
+      return NextResponse.json(banks);
     }
 
     const banks = await getBanks({ userId });
