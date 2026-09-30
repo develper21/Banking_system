@@ -1,0 +1,1269 @@
+{
+  "info": {
+    "_postman_id": "b7f3a1c2-4e5d-4a6b-8c9d-0e1f2a3b4c5d",
+    "name": "CashFlow Banking Platform — Full Route Testing",
+    "description": "Complete Postman collection for the CashFlow Banking Platform (Next.js App Router).\n\n## Structure\n- **01 Server API Routes** — every backend route under `/app/api/*` (auth, users, accounts, banks, transactions, plaid, monitoring)\n- **02 Frontend Page Routes** — every server-rendered page under `/app/(auth)` and `/app/(root)`\n\n## Quick Start\n1. Run the dev server: `npm run dev`\n2. Import this file into Postman (**Import → postman.json**)\n3. Requests marked ✅ **Demo** work instantly with zero configuration (mock test user `test-user-demo`)\n4. Requests marked ⚠️ **Live** require `.env` credentials (Appwrite / Plaid / Dwolla) and/or a session cookie\n\n## Test User (mock data, no services needed)\n- userId: `test-user-demo`\n- Bank item ids: `mock-bank-1`, `mock-bank-2`, `mock-bank-3`\n- 3 banks, 10 transactions, fully paginated\n\nGenerated for route-level smoke testing. Every request carries `pm.test` assertions.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:3000" },
+    { "key": "userId", "value": "test-user-demo" },
+    { "key": "appwriteItemId", "value": "mock-bank-1" },
+    { "key": "page", "value": "1" },
+    { "key": "limit", "value": "3" },
+    { "key": "registeredEmail", "value": "" },
+    { "key": "registeredPassword", "value": "Test@1234" },
+    { "key": "registeredUserId", "value": "" }
+  ],
+  "event": [
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Collection-wide assertion: every route must answer quickly",
+          "pm.test('Response time is under 5s', function () {",
+          "  pm.expect(pm.response.responseTime).to.be.below(5000);",
+          "});"
+        ]
+      }
+    }
+  ],
+  "item": [
+    {
+      "name": "01 Server API Routes",
+      "description": "All backend route handlers (`app/api/**/route.ts`).\n\n✅ = runs with mock data / validation only — no `.env` required.\n⚠️ = requires Appwrite (or Plaid/Dwolla) credentials from `.env`, and sometimes a session cookie.",
+      "item": [
+        {
+          "name": "Authentication",
+          "description": "Session login/logout via Appwrite — `app/api/auth/route.ts`",
+          "item": [
+            {
+              "name": "Login — Success ⚠️",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{registeredEmail}}\",\n  \"password\": \"{{registeredPassword}}\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "auth"]
+                },
+                "description": "Creates an Appwrite session for the given credentials.\n\n⚠️ Requires Appwrite env vars and an existing user — run **Users → Register — Success** first (it auto-fills `{{registeredEmail}}` / `{{registeredPassword}}`), or use any real Appwrite user.\n\n**200** → `{ success: true, data: <session> }`"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "const json = pm.response.json();",
+                      "pm.test('Response flags success', function () {",
+                      "  pm.expect(json.success).to.eql(true);",
+                      "});",
+                      "pm.test('Session object is returned', function () {",
+                      "  pm.expect(json.data).to.have.property('$id');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Login — Missing Fields ✅",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "auth"]
+                },
+                "description": "Validation guard — runs before any Appwrite call.\n\n**400** → `{ success: false, error: { message: 'Email and password are required', code: 'VALIDATION_ERROR' } }`"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 400', function () {",
+                      "  pm.response.to.have.status(400);",
+                      "});",
+                      "const json = pm.response.json();",
+                      "pm.test('Error payload shape is correct', function () {",
+                      "  pm.expect(json.success).to.eql(false);",
+                      "  pm.expect(json.error.message).to.include('required');",
+                      "  pm.expect(json.error.code).to.eql('VALIDATION_ERROR');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Login — Invalid Credentials ✅",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"invalid@cashflow.com\",\n  \"password\": \"wrong-password\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "auth"]
+                },
+                "description": "Wrong credentials must never authenticate.\n\n**401** → `{ success: false, error: { ... } }`"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 401', function () {",
+                      "  pm.response.to.have.status(401);",
+                      "});",
+                      "const json = pm.response.json();",
+                      "pm.test('Error payload shape is correct', function () {",
+                      "  pm.expect(json.success).to.eql(false);",
+                      "  pm.expect(json.error).to.be.an('object');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Logout ⚠️",
+              "request": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/auth",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "auth"]
+                },
+                "description": "Deletes the `current` Appwrite session.\n\n⚠️ **200** `{ success: true, message: 'Logged out successfully' }` when a session exists. Without an active Appwrite session the underlying delete fails → **500** (expected in a cold environment)."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 200 (session deleted) or 500 (no active session)', function () {",
+                      "  pm.expect([200, 500]).to.include(pm.response.code);",
+                      "});",
+                      "if (pm.response.code === 200) {",
+                      "  pm.test('Logout confirms success', function () {",
+                      "    pm.expect(pm.response.json().success).to.eql(true);",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Users",
+          "description": "Account registration — `app/api/user/register/route.ts`",
+          "item": [
+            {
+              "name": "Register — Success ⚠️",
+              "event": [
+                {
+                  "listen": "prerequest",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "// Generate a unique email so this request can be re-run safely",
+                      "const email = 'cf_' + Date.now() + '@testmail.com';",
+                      "pm.collectionVariables.set('registeredEmail', email);",
+                      "pm.collectionVariables.set('registeredPassword', 'Test@1234');"
+                    ]
+                  }
+                },
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "const json = pm.response.json();",
+                      "pm.test('Response flags success', function () {",
+                      "  pm.expect(json.success).to.eql(true);",
+                      "});",
+                      "pm.test('User + profile documents returned', function () {",
+                      "  pm.expect(json.data.user).to.have.property('$id');",
+                      "  pm.expect(json.data.profile).to.have.property('$id');",
+                      "});",
+                      "pm.test('Registered email is saved for the Login request', function () {",
+                      "  pm.collectionVariables.set('registeredUserId', json.data.user.$id);",
+                      "  pm.expect(json.data.user.email).to.eql(pm.collectionVariables.get('registeredEmail'));",
+                      "});"
+                    ]
+                  }
+                }
+              ],
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{registeredEmail}}\",\n  \"password\": \"{{registeredPassword}}\",\n  \"firstName\": \"Test\",\n  \"lastName\": \"User\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/user/register",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "user", "register"]
+                },
+                "description": "Creates an Appwrite account **and** a user profile document.\n\n⚠️ Requires Appwrite env vars. A pre-request script generates a unique email and stores `{{registeredEmail}}` / `{{registeredPassword}}`, which the **Login — Success** request reuses.\n\n**200** → `{ success: true, data: { user, profile } }`"
+              }
+            },
+            {
+              "name": "Register — Missing Fields ✅",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/user/register",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "user", "register"]
+                },
+                "description": "Validation guard — runs before Appwrite.\n\n**400** → `{ error: 'All fields are required' }`"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 400', function () {",
+                      "  pm.response.to.have.status(400);",
+                      "});",
+                      "pm.test('Validation message is returned', function () {",
+                      "  pm.expect(pm.response.json().error).to.include('required');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Register — Duplicate Email ⚠️",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"{{registeredEmail}}\",\n  \"password\": \"{{registeredPassword}}\",\n  \"firstName\": \"Test\",\n  \"lastName\": \"User\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/user/register",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "user", "register"]
+                },
+                "description": "Re-registering the same email must fail.\n\n⚠️ Requires Appwrite env vars **and** a successful run of *Register — Success* first.\n\n**500** → `{ error: '<Appwrite user_already_exists message>' }`"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 500', function () {",
+                      "  pm.response.to.have.status(500);",
+                      "});",
+                      "pm.test('Error message is returned', function () {",
+                      "  pm.expect(pm.response.json().error).to.be.a('string').that.is.not.empty;",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Accounts",
+          "description": "Aggregated bank-account data — `app/api/accounts/route.ts` and `app/api/account/route.ts`",
+          "item": [
+            {
+              "name": "Get All Accounts — Demo User ✅",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/accounts?userId={{userId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "accounts"],
+                  "query": [
+                    { "key": "userId", "value": "{{userId}}", "description": "Appwrite userId — `test-user-demo` resolves to mock data" }
+                  ]
+                },
+                "description": "Returns every connected account with balances and totals.\n\n✅ Demo user needs no services.\n\n**200** → `{ data: Account[], totalBanks: 3, totalCurrentBalance: <number> }`"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "const json = pm.response.json();",
+                      "pm.test('Three demo bank accounts are returned', function () {",
+                      "  pm.expect(json.data).to.be.an('array').that.has.lengthOf(3);",
+                      "  pm.expect(json.totalBanks).to.eql(3);",
+                      "});",
+                      "pm.test('Total balance is a positive number', function () {",
+                      "  pm.expect(json.totalCurrentBalance).to.be.a('number').that.is.above(0);",
+                      "});",
+                      "pm.test('Account objects expose the required fields', function () {",
+                      "  json.data.forEach(function (account) {",
+                      "    pm.expect(account).to.include.all.keys('id', 'name', 'mask', 'currentBalance', 'appwriteItemId');",
+                      "  });",
+                      "});",
+                      "// Save the first account for the single-account request",
+                      "pm.collectionVariables.set('appwriteItemId', json.data[0].appwriteItemId);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get All Accounts — Missing userId ✅",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/accounts",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "accounts"]
+                },
+                "description": "Validation guard.\n\n**400** → `{ error: 'User ID is required' }`"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 400', function () {",
+                      "  pm.response.to.have.status(400);",
+                      "});",
+                      "pm.test('Validation message is returned', function () {",
+                      "  pm.expect(pm.response.json().error).to.eql('User ID is required');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Single Account — Demo Bank ✅",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/account?appwriteItemId={{appwriteItemId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "account"],
+                  "query": [
+                    { "key": "appwriteItemId", "value": "{{appwriteItemId}}", "description": "Bank document id — `mock-bank-1` resolves to mock data" }
+                  ]
+                },
+                "description": "Returns one account plus its transaction list.\n\n✅ Any `mock-bank-*` id works offline.\n\n**200** → `{ data: Account, transactions: Transaction[] }`"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "const json = pm.response.json();",
+                      "pm.test('Requested bank document is returned', function () {",
+                      "  pm.expect(json.data.appwriteItemId).to.eql(pm.collectionVariables.get('appwriteItemId'));",
+                      "  pm.expect(json.data.currentBalance).to.be.a('number').that.is.above(0);",
+                      "});",
+                      "pm.test('Transaction list is returned', function () {",
+                      "  pm.expect(json.transactions).to.be.an('array').that.is.not.empty;",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Single Account — Missing ID ✅",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/account",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "account"]
+                },
+                "description": "Validation guard.\n\n**400** → `{ error: 'Appwrite Item ID is required' }`"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 400', function () {",
+                      "  pm.response.to.have.status(400);",
+                      "});",
+                      "pm.test('Validation message is returned', function () {",
+                      "  pm.expect(pm.response.json().error).to.eql('Appwrite Item ID is required');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Banks",
+          "description": "Connected bank documents — `app/api/banks/route.ts`",
+          "item": [
+            {
+              "name": "Get Banks — Demo User ✅",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/banks?userId={{userId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "banks"],
+                  "query": [
+                    { "key": "userId", "value": "{{userId}}" }
+                  ]
+                },
+                "description": "Lists the user's connected banks.\n\n✅ `test-user-demo` returns 3 mock banks without any services.\n\n**200** → `Bank[]`"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "const json = pm.response.json();",
+                      "pm.test('Three demo banks are returned', function () {",
+                      "  pm.expect(json).to.be.an('array').that.has.lengthOf(3);",
+                      "});",
+                      "pm.test('Each bank exposes document + plaid ids', function () {",
+                      "  json.forEach(function (bank) {",
+                      "    pm.expect(bank).to.include.all.keys('$id', 'accountId', 'bankId', 'userId');",
+                      "  });",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Banks — Missing userId ✅",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/banks",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "banks"]
+                },
+                "description": "Validation guard.\n\n**400** → `{ error: 'User ID is required' }`"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 400', function () {",
+                      "  pm.response.to.have.status(400);",
+                      "});",
+                      "pm.test('Validation message is returned', function () {",
+                      "  pm.expect(pm.response.json().error).to.eql('User ID is required');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Banks — Unknown User ⚠️",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/banks?userId=unknown-user-000",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "banks"],
+                  "query": [{ "key": "userId", "value": "unknown-user-000" }]
+                },
+                "description": "A valid but unknown user gets an empty list, not an error.\n\n⚠️ Reaches Appwrite, so `.env` must be configured.\n\n**200** → `[]`"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status is 200 (empty list) — 500 means Appwrite env is missing', function () {",
+                      "  pm.expect([200, 500]).to.include(pm.response.code);",
+                      "});",
+                      "if (pm.response.code === 200) {",
+                      "  pm.test('Empty array is returned for unknown user', function () {",
+                      "    pm.expect(pm.response.json()).to.be.an('array').that.is.empty;",
+                      "  });",
+                      "}"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Transactions",
+          "description": "Listing + creation — `app/api/transactions/route.ts`",
+          "item": [
+            {
+              "name": "List Transactions — Demo User (Page 1) ✅",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/transactions?userId={{userId}}&page=1&limit=3",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "transactions"],
+                  "query": [
+                    { "key": "userId", "value": "{{userId}}" },
+                    { "key": "page", "value": "1" },
+                    { "key": "limit", "value": "3" }
+                  ]
+                },
+                "description": "Paginated, newest-first transaction feed.\n\n✅ Demo user returns 10 mock transactions.\n\n**200** → `{ success: true, data: Transaction[], pagination: { page, limit, total, pages } }`"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "const json = pm.response.json();",
+                      "pm.test('Page 1 returns exactly 3 items', function () {",
+                      "  pm.expect(json.data).to.be.an('array').that.has.lengthOf(3);",
+                      "});",
+                      "pm.test('Pagination metadata is correct', function () {",
+                      "  pm.expect(json.pagination).to.eql({ page: 1, limit: 3, total: 10, pages: 4 });",
+                      "});",
+                      "pm.test('Success flag is set', function () {",
+                      "  pm.expect(json.success).to.eql(true);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "List Transactions — Demo User (Page 2) ✅",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/transactions?userId={{userId}}&page=2&limit=4",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "transactions"],
+                  "query": [
+                    { "key": "userId", "value": "{{userId}}" },
+                    { "key": "page", "value": "2" },
+                    { "key": "limit", "value": "4" }
+                  ]
+                },
+                "description": "Second page with a different page size — proves offset pagination.\n\n**200** → page 2 of 3 with 4 items."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "const json = pm.response.json();",
+                      "pm.test('Page 2 returns exactly 4 items', function () {",
+                      "  pm.expect(json.data).to.be.an('array').that.has.lengthOf(4);",
+                      "});",
+                      "pm.test('Pagination reports page 2 of 3', function () {",
+                      "  pm.expect(json.pagination.page).to.eql(2);",
+                      "  pm.expect(json.pagination.pages).to.eql(3);",
+                      "  pm.expect(json.pagination.total).to.eql(10);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "List Transactions — Missing userId ✅",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/transactions?page=1&limit=10",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "transactions"],
+                  "query": [
+                    { "key": "page", "value": "1" },
+                    { "key": "limit", "value": "10" }
+                  ]
+                },
+                "description": "Validation guard.\n\n**400** → `{ error: 'User ID is required' }`"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 400', function () {",
+                      "  pm.response.to.have.status(400);",
+                      "});",
+                      "pm.test('Validation message is returned', function () {",
+                      "  pm.expect(pm.response.json().error).to.eql('User ID is required');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Create Transaction — Missing Fields ✅",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/transactions",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "transactions"]
+                },
+                "description": "Validation guard — `userId, bankId, amount, category, description` are mandatory.\n\n**400** → `{ error: 'Required fields are missing' }`"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 400', function () {",
+                      "  pm.response.to.have.status(400);",
+                      "});",
+                      "pm.test('Validation message is returned', function () {",
+                      "  pm.expect(pm.response.json().error).to.include('missing');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Create Transaction — Unauthorized (no session) ✅",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"bankId\": \"mock-bank-1\",\n  \"amount\": 49.99,\n  \"category\": \"Food and Drink\",\n  \"description\": \"Postman smoke test\",\n  \"type\": \"debit\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/transactions",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "transactions"]
+                },
+                "description": "Writes require an authenticated `appwrite-session` cookie. With no cookie the route must refuse.\n\n**401** → `{ error: 'Unauthorized' }`"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 401 without a session cookie', function () {",
+                      "  pm.response.to.have.status(401);",
+                      "});",
+                      "pm.test('Unauthorized message is returned', function () {",
+                      "  pm.expect(pm.response.json().error).to.eql('Unauthorized');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Create Transaction — Success ⚠️",
+              "request": {
+                "auth": { "type": "noauth" },
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Cookie", "value": "appwrite-session=<paste-session-secret>" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"userId\": \"{{registeredUserId}}\",\n  \"bankId\": \"mock-bank-1\",\n  \"amount\": 49.99,\n  \"category\": \"Food and Drink\",\n  \"description\": \"Postman smoke test\",\n  \"type\": \"debit\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/transactions",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "transactions"]
+                },
+                "description": "Creates a transaction document.\n\n⚠️ Replace the `Cookie` header with a real `appwrite-session` secret (sign in via the UI, then copy the cookie from DevTools → Application → Cookies) **and** set `{{registeredUserId}}` (filled by *Register — Success*).\n\n**200** → `{ success: true, data: <document> }`"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "const json = pm.response.json();",
+                      "pm.test('Transaction document is created', function () {",
+                      "  pm.expect(json.success).to.eql(true);",
+                      "  pm.expect(json.data).to.have.property('$id');",
+                      "  pm.expect(json.data.amount).to.eql(49.99);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Plaid",
+          "description": "Bank-linking & webhooks — `app/api/plaid/create-link-token/route.ts` and `app/api/plaid/webhook/route.ts`",
+          "item": [
+            {
+              "name": "Create Link Token — Missing userId ✅",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/plaid/create-link-token",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "plaid", "create-link-token"]
+                },
+                "description": "Validation guard (fires before Plaid is touched).\n\n**400** → `{ error: 'User ID is required' }`"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 400', function () {",
+                      "  pm.response.to.have.status(400);",
+                      "});",
+                      "pm.test('Validation message is returned', function () {",
+                      "  pm.expect(pm.response.json().error).to.eql('User ID is required');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Create Link Token — Unauthorized (no session) ✅",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"userId\": \"test-user-demo\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/plaid/create-link-token",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "plaid", "create-link-token"]
+                },
+                "description": "Requires a session cookie before calling Plaid.\n\n**401** → `{ error: 'Unauthorized' }`"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 401 without a session cookie', function () {",
+                      "  pm.response.to.have.status(401);",
+                      "});",
+                      "pm.test('Unauthorized message is returned', function () {",
+                      "  pm.expect(pm.response.json().error).to.eql('Unauthorized');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Create Link Token — Success ⚠️",
+              "request": {
+                "method": "POST",
+                "header": [
+                  { "key": "Content-Type", "value": "application/json" },
+                  { "key": "Cookie", "value": "appwrite-session=<paste-session-secret>" }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"userId\": \"{{registeredUserId}}\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/plaid/create-link-token",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "plaid", "create-link-token"]
+                },
+                "description": "Exchanges a session + `PLAID_CLIENT_ID/SECRET` for a Plaid Link token (products: `auth`, `transactions`; countries: `US`, `IN`).\n\n⚠️ Needs a real `appwrite-session` cookie and Plaid sandbox keys in `.env`.\n\n**200** → `{ success: true, data: { link_token, expiration, ... } }`"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "const json = pm.response.json();",
+                      "pm.test('A Plaid link token is returned', function () {",
+                      "  pm.expect(json.success).to.eql(true);",
+                      "  pm.expect(json.data.link_token).to.be.a('string').that.includes('link-sandbox');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Webhook — Transactions Update ✅",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"webhook_type\": \"TRANSACTIONS\",\n  \"webhook_code\": \"TRANSACTIONS_REMOVED\",\n  \"item_id\": \"VPMQJKG5vASvpX8B6JK3HmXkZlAyplhW3r9xm\",\n  \"new_transactions\": 4\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/plaid/webhook",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "plaid", "webhook"]
+                },
+                "description": "Simulates a Plaid `TRANSACTIONS` webhook delivery.\n\n✅ Always acknowledge-only, no services needed.\n\n**200** → `{ received: true }`"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('Webhook is acknowledged', function () {",
+                      "  pm.expect(pm.response.json().received).to.eql(true);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Webhook — Unknown Type ✅",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"webhook_type\": \"SOMETHING_ELSE\",\n  \"webhook_code\": \"MYSTERY\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/plaid/webhook",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "plaid", "webhook"]
+                },
+                "description": "Unknown webhook types must still be acknowledged (default case) so Plaid does not retry forever.\n\n**200** → `{ received: true }`"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "pm.test('Unknown webhook is still acknowledged', function () {",
+                      "  pm.expect(pm.response.json().received).to.eql(true);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "Monitoring & Errors",
+          "description": "Client error reporting and instrumentation — `app/api/error/route.ts`, `app/api/sentry-example-api/route.js`",
+          "item": [
+            {
+              "name": "Log Client Error — Success ✅",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"error\": {\n    \"name\": \"TypeError\",\n    \"message\": \"Postman smoke test error\",\n    \"stack\": \"fake stack trace\"\n  },\n  \"context\": \"postman-smoke-test\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/error",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "error"]
+                },
+                "description": "Frontend error-reporting endpoint used by the error boundary.\n\n**200** → `{ success: true, message: 'Error logged successfully' }`"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 200', function () {",
+                      "  pm.response.to.have.status(200);",
+                      "});",
+                      "const json = pm.response.json();",
+                      "pm.test('Error is acknowledged', function () {",
+                      "  pm.expect(json.success).to.eql(true);",
+                      "  pm.expect(json.message).to.include('logged');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Log Client Error — Missing Error ✅",
+              "request": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"context\": \"no-payload\"\n}",
+                  "options": { "raw": { "language": "json" } }
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/error",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "error"]
+                },
+                "description": "Validation guard.\n\n**400** → `{ error: 'Error data is required' }`"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 400', function () {",
+                      "  pm.response.to.have.status(400);",
+                      "});",
+                      "pm.test('Validation message is returned', function () {",
+                      "  pm.expect(pm.response.json().error).to.include('required');",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Sentry Test Endpoint (always 500) ✅",
+              "request": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/sentry-example-api",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "sentry-example-api"]
+                },
+                "description": "Intentionally throws to verify Sentry server instrumentation is wired up.\n\n**500** — this is the *expected* result. Check your Sentry dashboard (or the dev-server console) for `Sentry Example API Route Error`."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "type": "text/javascript",
+                    "exec": [
+                      "pm.test('Status code is 500 — endpoint throws by design', function () {",
+                      "  pm.response.to.have.status(500);",
+                      "});"
+                    ]
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "02 Frontend Page Routes",
+      "description": "Server-rendered pages (Next.js App Router). These verify each route compiles and responds with HTML.\n\n- `/sign-in` and `/sign-up` are public.\n- `/`, `/my-banks`, `/transaction-history`, `/payment-transfer` are **protected** — without a session cookie they render an empty shell (HTTP 200, blank content by design; see `app/(root)/page.tsx` → `if (!loggedIn) return;`).\n- To test protected pages with real data: sign in in the browser, copy the `appwrite-session` cookie, and add it under the collection's **Cookies** manager (or as a `Cookie` header).",
+      "item": [
+        {
+          "name": "Home Dashboard (protected)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": ["{{baseUrl}}"],
+              "path": [""]
+            },
+            "description": "`app/(root)/page.tsx` — total balance box, recent transactions, right sidebar. Supports `?id=<appwriteItemId>&page=<n>`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is HTML', function () {",
+                  "  pm.expect(pm.response.headers.get('content-type')).to.include('text/html');",
+                  "  pm.expect(pm.response.text()).to.not.be.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign In Page (public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sign-in",
+              "host": ["{{baseUrl}}"],
+              "path": ["sign-in"]
+            },
+            "description": "`app/(auth)/sign-in/page.tsx` — renders `AuthForm type=\"sign-in\"`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is HTML', function () {",
+                  "  pm.expect(pm.response.headers.get('content-type')).to.include('text/html');",
+                  "  pm.expect(pm.response.text()).to.not.be.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Sign Up Page (public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/sign-up",
+              "host": ["{{baseUrl}}"],
+              "path": ["sign-up"]
+            },
+            "description": "`app/(auth)/sign-up/page.tsx` — renders `AuthForm type=\"sign-up\"`."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is HTML', function () {",
+                  "  pm.expect(pm.response.headers.get('content-type')).to.include('text/html');",
+                  "  pm.expect(pm.response.text()).to.not.be.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My Banks (protected)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/my-banks",
+              "host": ["{{baseUrl}}"],
+              "path": ["my-banks"]
+            },
+            "description": "`app/(root)/my-banks/page.tsx` — list of connected banks + PlaidLink."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is HTML', function () {",
+                  "  pm.expect(pm.response.headers.get('content-type')).to.include('text/html');",
+                  "  pm.expect(pm.response.text()).to.not.be.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Transaction History (protected)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/transaction-history?id={{appwriteItemId}}&page=1",
+              "host": ["{{baseUrl}}"],
+              "path": ["transaction-history"],
+              "query": [
+                { "key": "id", "value": "{{appwriteItemId}}", "description": "Bank document id" },
+                { "key": "page", "value": "1" }
+              ]
+            },
+            "description": "`app/(root)/transaction-history/page.tsx` — per-bank history with pagination."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is HTML', function () {",
+                  "  pm.expect(pm.response.headers.get('content-type')).to.include('text/html');",
+                  "  pm.expect(pm.response.text()).to.not.be.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Payment Transfer (protected)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/payment-transfer",
+              "host": ["{{baseUrl}}"],
+              "path": ["payment-transfer"]
+            },
+            "description": "`app/(root)/payment-transfer/page.tsx` — Dwolla-funded transfer form."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test('Response is HTML', function () {",
+                  "  pm.expect(pm.response.headers.get('content-type')).to.include('text/html');",
+                  "  pm.expect(pm.response.text()).to.not.be.empty;",
+                  "});"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
