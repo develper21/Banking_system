@@ -24,23 +24,19 @@ jest.mock('next/router', () => ({
 }))
 
 // Mock Next.js navigation
+const mockNavigationRouter = {
+  push: jest.fn(),
+  replace: jest.fn(),
+  refresh: jest.fn(),
+  back: jest.fn(),
+  forward: jest.fn(),
+  prefetch: jest.fn(),
+}
+
 jest.mock('next/navigation', () => ({
-  useRouter() {
-    return {
-      push: jest.fn(),
-      replace: jest.fn(),
-      refresh: jest.fn(),
-      back: jest.fn(),
-      forward: jest.fn(),
-      prefetch: jest.fn(),
-    }
-  },
-  useSearchParams() {
-    return new URLSearchParams()
-  },
-  usePathname() {
-    return '/'
-  },
+  useRouter: () => mockNavigationRouter,
+  useSearchParams: () => new URLSearchParams(),
+  usePathname: () => '/',
 }))
 
 // Mock Plaid
@@ -72,4 +68,35 @@ jest.mock('react-chartjs-2', () => ({
   Doughnut: () => null,
   Line: () => null,
   Bar: () => null,
+}))
+
+// Mock query-string (ESM module)
+jest.mock('query-string', () => ({
+  parse: (str = '') => {
+    const params = new URLSearchParams(typeof str === 'string' ? str : '')
+    const result = {}
+    for (const [key, value] of params.entries()) {
+      result[key] = value
+    }
+    return result
+  },
+  stringifyUrl: ({ url = '', query = {} }) => {
+    const searchParams = new URLSearchParams()
+    for (const [key, value] of Object.entries(query)) {
+      if (value !== null && value !== undefined) {
+        searchParams.set(key, String(value))
+      }
+    }
+    const qs = searchParams.toString()
+    return qs ? `${url}?${qs}` : url
+  },
+  stringify: (obj = {}) => {
+    const searchParams = new URLSearchParams()
+    for (const [key, value] of Object.entries(obj)) {
+      if (value !== null && value !== undefined) {
+        searchParams.set(key, String(value))
+      }
+    }
+    return searchParams.toString()
+  },
 }))
