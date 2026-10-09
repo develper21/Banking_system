@@ -181,7 +181,7 @@ const PaymentTransferForm = ({ accounts }: PaymentTransferFormProps) => {
             </div>
             <div>
               <h3 className="text-16 font-semibold text-gray-900">Recipient Information</h3>
-              <p className="text-14 text-gray-600">Enter the recipient's bank account details</p>
+              <p className="text-14 text-gray-600">Enter the recipient&apos;s bank account details</p>
             </div>
           </div>
 
@@ -195,7 +195,7 @@ const PaymentTransferForm = ({ accounts }: PaymentTransferFormProps) => {
                     Email Address
                   </FormLabel>
                   <FormDescription className="text-12 text-gray-500 mb-3">
-                    Recipient's email address
+                    Recipient&apos;s email address
                   </FormDescription>
                   <FormControl>
                     <Input
@@ -217,7 +217,7 @@ const PaymentTransferForm = ({ accounts }: PaymentTransferFormProps) => {
                     Shareable ID
                   </FormLabel>
                   <FormDescription className="text-12 text-gray-500 mb-3">
-                    Recipient's public account number
+                    Recipient&apos;s public account number
                   </FormDescription>
                   <FormControl>
                     <Input
