@@ -1,0 +1,63 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      NEXT_PUBLIC_APPWRITE_ENDPOINT: https://nyc.cloud.appwrite.io/v1
+      NEXT_PUBLIC_APPWRITE_PROJECT: dummy-project-id
+      NEXT_APPWRITE_KEY: dummy-appwrite-key
+      APPWRITE_DATABASE_ID: dummy-database-id
+      APPWRITE_USER_COLLECTION_NAME: dummy-user-collection
+      APPWRITE_BANK_COLLECTION_NAME: dummy-bank-collection
+      APPWRITE_ITEM_COLLECTION_NAME: dummy-item-collection
+      APPWRITE_TRANSACTION_COLLECTION_NAME: dummy-transaction-collection
+      PLAID_CLIENT_ID: dummy-plaid-client-id
+      PLAID_SECRET: dummy-plaid-secret
+      PLAID_ENV: sandbox
+      PLAID_WEBHOOK_URL: http://localhost:3000/api/plaid/webhook
+      PLAID_COUNTRY_CODES: US
+      DWOLLA_KEY: dummy-dwolla-key
+      DWOLLA_SECRET: dummy-dwolla-secret
+      DWOLLA_BASE_URL: https://api-sandbox.dwolla.com
+      DWOLLA_ENV: sandbox
+      SENTRY_AUTH_TOKEN: dummy-token
+      SENTRY_ORG: narvindeveloper
+      SENTRY_PROJECT: banking_app
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run linter
+        run: npm run lint
+
+      - name: Run unit and integration tests
+        run: npm run test:coverage
+
+      - name: Build Next.js application
+        run: npm run build
